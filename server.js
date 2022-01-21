@@ -9,12 +9,11 @@ const bodyParser = require("body-parser");
 mongoose.connect(process.env.MONGO_URI,  { useNewUrlParser: true, 
 useUnifiedTopology: true });
 const userSchema = new Schema({
-  "username" : String
+  "username" : {type:String, unique:true}
 });
 
 const exerciseSchema = new Schema({
   userId: String,
-  username: String,
   description : String,
   duration : Number,
   date :{ type: Date, default: Date.now }
@@ -95,14 +94,14 @@ app.get("/api/users",(req,res)=>{
 
 });
 
-app.get("/api/users/:_id/logs?:from",(req,res)=>{
+app.get("/api/users/:_id/logs",(req,res)=>{
 
 const userid = req.params._id;
-console.log(req.query);
+
 const {from,to,limit} =req.query;
 
 let exercises = [];
-Exercise.find({userId:userid},(err,data)=>{
+Exercise.find({userId:userid},{date:{$gte:new Date(from), $lte:new Date(to)}}).select(['description','duration','date']).limit(limit).exec((err,data)=>{
   if(err) return console.log(err);
   
 data.map((exercise)=>{
@@ -112,7 +111,7 @@ data.map((exercise)=>{
 
  User.findById(userid,(err,data)=>{
 
-if(err) return res.send(err);
+if(!data)  res.send("user not found");
  
  const username = data.username;
 
@@ -122,14 +121,11 @@ if(err) return res.send(err);
   , log:exercises.map(exercise =>{
     return ({description:exercise.description,duration:exercise.duration,date:exercise.date.toDateString()})
   })});
-})
-
 });
 
 });
 
-
- 
+});
 
 
 
